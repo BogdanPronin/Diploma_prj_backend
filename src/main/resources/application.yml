@@ -1,0 +1,61 @@
+#spring:
+#  mail:
+#    host: smtp.mail.ru
+#    port: 465
+#    username: ${MAIL_USER}   # Значения можно задавать через переменные окружения
+#    password: ${MAIL_PASS}
+#    properties:
+#      mail:
+#        smtp:
+#          auth: true
+#          ssl:
+#            enable: true
+#  security:
+#    oauth2:
+#      client:
+#        registration:
+#          google:
+#            client-id: ${GMAIL_ID}
+#            client-secret: ${GMAIL_SECRET}
+#            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+#            scope:
+#              - email
+#              - profile
+#              - https://mail.google.com/
+#            client-name: Gmail
+#        provider:
+#          google:
+#            authorization-uri: https://accounts.google.com/o/oauth2/v2/auth?access_type=offline&prompt=consent
+#            token-uri: https://oauth2.googleapis.com/token
+#            user-info-uri: https://openidconnect.googleapis.com/v1/userinfo
+#
+#
+#oauth2:
+#  providers:
+#    google:
+#      clientId: ${GMAIL_ID}
+#      clientSecret: ${GMAIL_SECRET}
+#      redirectUri: http://localhost:8080/auth/callback/google
+#      authUri: https://accounts.google.com/o/oauth2/v2/auth
+#      tokenUri: https://oauth2.googleapis.com/token
+#      scope: https://mail.google.com/ https://www.googleapis.com/auth/userinfo.email
+email:
+  providers:
+    google:
+      imap:
+        host: imap.gmail.com
+        port: "993"
+        sslEnabled: true
+        authMechanism: XOAUTH2
+      smtp:
+        host: smtp.gmail.com
+        port: "465"
+        sslEnabled: true
+        authMechanism: XOAUTH2
+      folderMappings:
+        INBOX: INBOX
+        SENT: "[Gmail]/Отправленные"
+        DRAFTS: "[Gmail]/Черновики"
+        TRASH: "[Gmail]/Корзина"
+        SPAM: "[Gmail]/Спам"
+        ARCHIVE: "[Gmail]"
