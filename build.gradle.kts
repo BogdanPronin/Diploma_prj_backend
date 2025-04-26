@@ -29,8 +29,6 @@ dependencies {
     implementation("com.google.oauth-client:google-oauth-client:1.35.0")
     implementation("com.google.apis:google-api-services-gmail:v1-rev20220404-2.0.0")
     implementation("org.apache.tika:tika-core:3.1.0")
-
-
 }
 
 

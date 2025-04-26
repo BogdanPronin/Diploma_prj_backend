@@ -59,3 +59,22 @@ email:
         TRASH: "[Gmail]/Корзина"
         SPAM: "[Gmail]/Спам"
         ARCHIVE: "[Gmail]"
+    custom:
+      imap:
+        host: mail.messenger-mail.ru
+        port: "993"
+        sslEnabled: true
+        authMechanism: PLAIN
+      smtp:
+        host: mail.messenger-mail.ru
+        port: "587"
+        sslEnabled: false
+        startTlsEnabled: true
+        authMechanism: PLAIN
+      folderMappings:
+        INBOX: INBOX
+        SENT: Sent
+        DRAFTS: Drafts
+        TRASH: Trash
+        SPAM: Spam
+        ARCHIVE: Archive

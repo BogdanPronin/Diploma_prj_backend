@@ -4,7 +4,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 
 @ConfigurationProperties(prefix = "email.providers")
 data class EmailProviderProperties(
-    val google: ProviderConfig
+    val google: ProviderConfig,
+    val custom: ProviderConfig
 )
 
 data class ProviderConfig(

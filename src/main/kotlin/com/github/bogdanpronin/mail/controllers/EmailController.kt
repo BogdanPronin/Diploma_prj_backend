@@ -1,13 +1,20 @@
 package com.github.bogdanpronin.mail.controllers
 
 import com.github.bogdanpronin.mail.controllers.dto.DeleteForeverRequestDto
-import com.github.bogdanpronin.mail.controllers.dto.MoveToTrashRequestDto
+import com.github.bogdanpronin.mail.controllers.dto.DownloadAttachmentRequest
+import com.github.bogdanpronin.mail.controllers.dto.MarkReadRequest
+import com.github.bogdanpronin.mail.controllers.dto.MoveToFolderRequestDto
 import com.github.bogdanpronin.mail.model.*
 import com.github.bogdanpronin.mail.services.ImapService
-import org.springframework.http.HttpStatus
+import org.springframework.core.io.ByteArrayResource
+import org.springframework.core.io.InputStreamResource
+import org.springframework.http.HttpHeaders
+import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.multipart.MultipartFile
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 @RestController
 @RequestMapping("/api/mail")
@@ -33,18 +40,19 @@ class EmailController(
         return ResponseEntity.ok(result)
     }
 
-    @PostMapping("/move-to-trash")
+    @PostMapping("/move-to-folder")
     fun moveToTrash(
         @RequestHeader("Authorization") authHeader: String,
-        @RequestBody request: MoveToTrashRequestDto
+        @RequestBody request: MoveToFolderRequestDto
     ): ResponseEntity<Map<String, String>> {
         val accessToken = authHeader.removePrefix("Bearer ").trim()
-        val result = imapService.moveToTrash(
+        val result = imapService.moveToFolder(
             providerName = request.providerName,
             accessToken = accessToken,
             email = request.email,
             uid = request.uid,
-            sourceFolder = request.sourceFolder
+            sourceFolder = request.sourceFolder,
+            toFolder = request.toFolder,
         )
         return ResponseEntity.ok(mapOf("message" to result))
     }
@@ -73,7 +81,7 @@ class EmailController(
         @RequestPart("subject") subject: String,
         @RequestPart("html") html: String,
         @RequestPart("providerName") providerName: String,
-        @RequestPart("email") email: String, // Добавляем email
+        @RequestPart("email") email: String,
         @RequestPart("attachments", required = false) attachments: List<MultipartFile>?
     ): ResponseEntity<Unit> {
             val accessToken = authHeader.removePrefix("Bearer ").trim()
@@ -123,6 +131,48 @@ class EmailController(
         } catch (e: Exception) {
             ResponseEntity.badRequest().body(EmailResponseDto(0, 0, emptyList()))
         }
+    }
+
+    @PostMapping("/download-attachment")
+    fun downloadAttachment(
+        @RequestBody request: DownloadAttachmentRequest,
+        @RequestHeader("Authorization") authHeader: String
+    ): ResponseEntity<ByteArrayResource> {
+        val accessToken = authHeader.removePrefix("Bearer ").trim()
+
+        val (fileContent, contentType) = imapService.downloadAttachment(
+            request.providerName,
+            accessToken,
+            request.email,
+            request.uid,
+            request.folder,
+            request.filename
+        )
+
+        val encodedFilename = URLEncoder.encode(request.filename, StandardCharsets.UTF_8.toString())
+            .replace("+", "%20")
+        val contentDisposition = "attachment; filename*=UTF-8''$encodedFilename"
+
+        return ResponseEntity.ok()
+            .contentType(MediaType.parseMediaType(contentType))
+            .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition)
+            .body(ByteArrayResource(fileContent))
+    }
+
+    @PostMapping("/mark-read-batch")
+    fun markEmailsAsRead(
+        @RequestBody request: MarkReadRequest,
+        @RequestHeader("Authorization") authHeader: String
+    ): ResponseEntity<String> {
+        val accessToken = authHeader.removePrefix("Bearer ").trim()
+        val response = imapService.markEmailsAsRead(
+            request.providerName,
+            accessToken,
+            request.email,
+            request.uids,
+            request.folderName
+        )
+        return ResponseEntity.ok(response)
     }
 
 }

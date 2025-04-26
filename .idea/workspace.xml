@@ -4,39 +4,20 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="2a9f05d3-7336-4900-a117-1fb8d8cbe7ad" name="Changes" comment="Почти все">
-      <change afterPath="$PROJECT_DIR$/src/main/kotlin/com/github/bogdanpronin/Application.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/kotlin/com/github/bogdanpronin/WebConfig.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/kotlin/com/github/bogdanpronin/auth/config/OAuth2Config.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/kotlin/com/github/bogdanpronin/auth/controller/OAuth2Controller.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/kotlin/com/github/bogdanpronin/auth/model/OAuthToken.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/kotlin/com/github/bogdanpronin/auth/model/OAuthTokenResponse.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/kotlin/com/github/bogdanpronin/auth/service/TokenService.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/kotlin/com/github/bogdanpronin/mail/config/EmailProviderConfig.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/kotlin/com/github/bogdanpronin/mail/config/EmailProviderProperties.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/kotlin/com/github/bogdanpronin/mail/controllers/EmailController.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/kotlin/com/github/bogdanpronin/mail/controllers/GlobalExceptionHandler.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/kotlin/com/github/bogdanpronin/mail/controllers/dto/DeleteForeverRequestDto.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/kotlin/com/github/bogdanpronin/mail/controllers/dto/FolderResponseDto.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/kotlin/com/github/bogdanpronin/mail/controllers/dto/MoveToTrashRequestDto.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/kotlin/com/github/bogdanpronin/mail/mapper/EmailMapper.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/kotlin/com/github/bogdanpronin/mail/model/EmailResponse.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/kotlin/com/github/bogdanpronin/mail/model/MarkReadRequest.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/kotlin/com/github/bogdanpronin/mail/model/SendEmailForm.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/kotlin/com/github/bogdanpronin/mail/provider/EmailProvider.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/kotlin/com/github/bogdanpronin/mail/provider/RootEmailProvider.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/kotlin/com/github/bogdanpronin/mail/provider/impl/GoogleEmailProvider.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/kotlin/com/github/bogdanpronin/mail/services/ImapService.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/kotlin/com/github/bogdanpronin/mail/services/OAuthUtils.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/resources/application.yml" afterDir="false" />
+    <list default="true" id="2a9f05d3-7336-4900-a117-1fb8d8cbe7ad" name="Changes" comment="Маппинг папок">
+      <change afterPath="$PROJECT_DIR$/src/main/kotlin/com/github/bogdanpronin/mail/controllers/dto/DownloadAttachmentRequest.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/kotlin/com/github/bogdanpronin/mail/controllers/dto/MarkReadRequest.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/kotlin/com/github/bogdanpronin/mail/provider/impl/CustomEmailProvider.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/build.gradle.kts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/Application.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/Main.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/routes/AuthRoutes.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/routes/EmailRoutes.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/security/JwtConfig.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/services/EmailService.kt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/kotlin/com/github/bogdanpronin/mail/config/EmailProviderConfig.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/com/github/bogdanpronin/mail/config/EmailProviderConfig.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/kotlin/com/github/bogdanpronin/mail/config/EmailProviderProperties.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/com/github/bogdanpronin/mail/config/EmailProviderProperties.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/kotlin/com/github/bogdanpronin/mail/controllers/EmailController.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/com/github/bogdanpronin/mail/controllers/EmailController.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/kotlin/com/github/bogdanpronin/mail/controllers/dto/MoveToTrashRequestDto.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/com/github/bogdanpronin/mail/controllers/dto/MoveToFolderRequestDto.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/kotlin/com/github/bogdanpronin/mail/provider/impl/GoogleEmailProvider.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/com/github/bogdanpronin/mail/provider/impl/GoogleEmailProvider.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/kotlin/com/github/bogdanpronin/mail/services/ImapService.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/com/github/bogdanpronin/mail/services/ImapService.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/application.yml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -85,25 +66,25 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Gradle.Build Backend_diploma.executor": "Run",
-    "Kotlin.ApplicationKt.executor": "Run",
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "dart.analysis.tool.window.visible": "false",
-    "git-widget-placeholder": "main",
-    "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "/Users/bogdanpronin/Backend_diploma/src/main/kotlin/com/github/bogdanpronin/mailser",
-    "onboarding.tips.debug.path": "/Users/bogdanpronin/Backend_diploma/src/main/kotlin/Main.kt",
-    "project.structure.last.edited": "Modules",
-    "project.structure.proportion": "0.0",
-    "project.structure.side.proportion": "0.0",
-    "settings.editor.selected.configurable": "preferences.pluginManager",
-    "show.migrate.to.gradle.popup": "false"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Gradle.Build Backend_diploma.executor&quot;: &quot;Run&quot;,
+    &quot;Kotlin.ApplicationKt.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;dart.analysis.tool.window.visible&quot;: &quot;false&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/bogdanpronin/Backend_diploma/src/main/kotlin/com/github/bogdanpronin/mailser&quot;,
+    &quot;onboarding.tips.debug.path&quot;: &quot;/Users/bogdanpronin/Backend_diploma/src/main/kotlin/Main.kt&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Modules&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.0&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.0&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
+    &quot;show.migrate.to.gradle.popup&quot;: &quot;false&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/src/main/kotlin/com/github/bogdanpronin/mailser" />
@@ -173,13 +154,30 @@
       <option name="project" value="LOCAL" />
       <updated>1742147224515</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="Почти все">
+      <option name="closed" value="true" />
+      <created>1745521341533</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1745521341533</updated>
+    </task>
+    <task id="LOCAL-00004" summary="Маппинг папок">
+      <option name="closed" value="true" />
+      <created>1745575193888</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1745575193888</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="initial" />
     <MESSAGE value="Почти все" />
-    <option name="LAST_COMMIT_MESSAGE" value="Почти все" />
+    <MESSAGE value="Маппинг папок" />
+    <option name="LAST_COMMIT_MESSAGE" value="Маппинг папок" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -188,6 +186,11 @@
           <url>file://$PROJECT_DIR$/src/main/kotlin/com/github/bogdanpronin/Main.kt</url>
           <line>14</line>
           <option name="timeStamp" value="1" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="kotlin-line">
+          <url>file://$PROJECT_DIR$/src/main/kotlin/com/github/bogdanpronin/mail/provider/RootEmailProvider.kt</url>
+          <line>24</line>
+          <option name="timeStamp" value="13" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
@@ -199,6 +202,7 @@
     <watches-manager>
       <configuration name="JetRunConfigurationType">
         <watch expression="val a = store.defaultFolder" language="kotlin" />
+        <watch expression="&#10;Connected to the target VM, address: '127.0.0.1:59145', transport: 'socket'&#10;Standard Commons Logging discovery in action with spring-jcl: please remove commons-logging.jar from classpath in order to avoid potential conflicts&#10;&#10;  .   ____          _            __ _ _&#10; /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \&#10;( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \&#10; \\/  ___)| |_)| | | | | || (_| |  ) ) ) )&#10;  '  |____| .__|_| |_|_| |_\__, | / / / /&#10; =========|_|==============|___/=/_/_/_/&#10;&#10; :: Spring Boot ::                (v3.3.4)&#10;&#10;2025-04-26T12:23:58.351+03:00  INFO 22753 --- [           main] com.github.bogdanpronin.ApplicationKt    : Starting ApplicationKt using Java 21 with PID 22753 (/Users/bogdanpronin/Backend_diploma/build/classes/kotlin/main started by bogdanpronin in /Users/bogdanpronin/Backend_diploma)&#10;2025-04-26T12:23:58.354+03:00  INFO 22753 --- [           main] com.github.bogdanpronin.ApplicationKt    : No active profile set, falling back to 1 default profile: &quot;default&quot;&#10;2025-04-26T12:24:00.285+03:00  INFO 22753 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)&#10;2025-04-26T12:24:00.325+03:00  INFO 22753 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]&#10;2025-04-26T12:24:00.326+03:00  INFO 22753 --- [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.30]&#10;2025-04-26T12:24:00.416+03:00  INFO 22753 --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext&#10;2025-04-26T12:24:00.418+03:00  INFO 22753 --- [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 1990 ms&#10;Standard Commons Logging discovery in action with spring-jcl: please remove commons-logging.jar from classpath in order to avoid potential conflicts&#10;2025-04-26T12:24:01.792+03:00  INFO 22753 --- [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'&#10;2025-04-26T12:24:01.883+03:00  INFO 22753 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServ" />
       </configuration>
     </watches-manager>
   </component>

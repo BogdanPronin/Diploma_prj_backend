@@ -1,5 +1,4 @@
 package com.github.bogdanpronin.mail.services
-import com.github.bogdanpronin.mail.controllers.dto.FolderResponseDto
 import com.github.bogdanpronin.mail.mapper.EmailMapper
 import com.github.bogdanpronin.mail.model.EmailResponseDto
 import com.github.bogdanpronin.mail.provider.EmailProvider
@@ -16,6 +15,8 @@ import jakarta.mail.util.ByteArrayDataSource
 
 import org.springframework.stereotype.Service
 import org.springframework.web.multipart.MultipartFile
+import java.io.ByteArrayOutputStream
+import java.io.InputStream
 import java.util.*
 
 @Service
@@ -23,6 +24,7 @@ class ImapService(
     private val emailMapper: EmailMapper,
     private val providers: Map<String, EmailProvider>
 ) {
+
     fun readEmails(
         providerName: String,
         accessToken: String,
@@ -71,12 +73,13 @@ class ImapService(
         )
     }
 
-    fun moveToTrash(
+    fun moveToFolder(
         providerName: String,
         accessToken: String,
         email: String,
         uid: Long,
-        sourceFolder: String
+        sourceFolder: String,
+        toFolder: String
     ): String {
         val provider = providers[providerName] ?: throw IllegalArgumentException("Unknown provider: $providerName")
 
@@ -92,8 +95,8 @@ class ImapService(
         val store = provider.connect(session, email, accessToken)
 
         try {
-            val from = store.getFolder(sourceFolder)
-            val to = provider.getFolder(store,"TRASH")
+            val from = provider.getFolder(store, sourceFolder)
+            val to = provider.getFolder(store, toFolder)
 
             from.open(Folder.READ_WRITE)
             to.open(Folder.READ_WRITE)
@@ -102,9 +105,16 @@ class ImapService(
             val message = uidFolder.getMessageByUID(uid)
                 ?: throw MessagingException("Письмо с UID $uid не найдено")
 
+            // Копируем письмо в целевую папку
             from.copyMessages(arrayOf(message), to)
-            // просто копируем — ничего больше не делаем
-            return "Письмо скопировано в корзину"
+
+            // Помечаем письмо как удалённое в исходной папке
+            message.setFlag(Flags.Flag.DELETED, true)
+
+            // Удаляем помеченные письма из исходной папки
+            from.expunge()
+
+            return "Письмо перемещено в папку $toFolder"
         } finally {
             store.close()
         }
@@ -134,7 +144,7 @@ class ImapService(
         val store = provider.connect(session, email, accessToken)
 
         try {
-            val folder = store.getFolder(folderName)
+            val folder = provider.getFolder(store, folderName)
             folder.open(Folder.READ_WRITE)
 
             val uidFolder = folder as UIDFolder
@@ -165,10 +175,10 @@ class ImapService(
         val props = Properties().apply {
             put("mail.smtp.auth", "true")
             put("mail.smtp.starttls.enable", "true")     // STARTTLS
-            put("mail.smtp.ssl.enable", "false")         // без SSL
-            put("mail.smtp.host", "smtp.gmail.com")
-            put("mail.smtp.port", "587")
-            put("mail.smtp.auth.mechanisms", "XOAUTH2")
+            put("mail.smtp.ssl.enable", smtpConfig.sslEnabled)         // без SSL
+            put("mail.smtp.host", smtpConfig.host)
+            put("mail.smtp.port", smtpConfig.port)
+            put("mail.smtp.auth.mechanisms",smtpConfig.authMechanism)
         }
 
 
@@ -284,6 +294,97 @@ class ImapService(
             )
         } finally {
             folder.close(false)
+            store.close()
+        }
+    }
+
+    fun downloadAttachment(
+        providerName: String,
+        accessToken: String,
+        email: String,
+        uid: Long,
+        folderName: String,
+        filename: String
+    ): Pair<ByteArray, String> {
+        val provider = providers[providerName] ?: throw IllegalArgumentException("Unknown provider: $providerName")
+
+        val props = Properties().apply {
+            put("mail.store.protocol", "imap")
+            put("mail.imap.host", provider.getConfig().imap.host)
+            put("mail.imap.port", provider.getConfig().imap.port)
+            put("mail.imap.ssl.enable", provider.getConfig().imap.sslEnabled.toString())
+            put("mail.imap.auth.mechanisms", provider.getConfig().imap.authMechanism)
+        }
+
+        val session = Session.getInstance(props)
+        val store = provider.connect(session, email, accessToken)
+
+        try {
+            val folder = provider.getFolder(store, folderName)
+            folder.open(Folder.READ_ONLY)
+
+            val uidFolder = folder as UIDFolder
+            val message = uidFolder.getMessageByUID(uid)
+                ?: throw MessagingException("Письмо с UID $uid не найдено")
+
+            val multipart = message.content as? Multipart
+                ?: throw MessagingException("Письмо не содержит вложений")
+
+            for (i in 0 until multipart.count) {
+                val part = multipart.getBodyPart(i)
+                if (Part.ATTACHMENT.equals(part.disposition, ignoreCase = true) && part.fileName == filename) {
+                    val inputStream = part.inputStream
+                    val byteArrayOutputStream = ByteArrayOutputStream()
+                    inputStream.use { it.copyTo(byteArrayOutputStream) }
+                    return Pair(byteArrayOutputStream.toByteArray(), part.contentType?.split(";")?.get(0) ?: "application/octet-stream")
+                }
+            }
+
+            throw MessagingException("Вложение $filename не найдено в письме с UID $uid")
+        } finally {
+            store.close()
+        }
+    }
+
+    fun markEmailsAsRead(
+        providerName: String,
+        accessToken: String,
+        email: String,
+        uids: List<Long>,
+        folderName: String
+    ): String {
+        val provider = providers[providerName] ?: throw IllegalArgumentException("Unknown provider: $providerName")
+
+        val props = Properties().apply {
+            put("mail.store.protocol", "imap")
+            put("mail.imap.host", provider.getConfig().imap.host)
+            put("mail.imap.port", provider.getConfig().imap.port)
+            put("mail.imap.ssl.enable", provider.getConfig().imap.sslEnabled.toString())
+            put("mail.imap.auth.mechanisms", provider.getConfig().imap.authMechanism)
+        }
+
+        val session = Session.getInstance(props)
+        val store = provider.connect(session, email, accessToken)
+
+        try {
+            val folder = provider.getFolder(store, folderName)
+            folder.open(Folder.READ_WRITE)
+
+            val uidFolder = folder as UIDFolder
+            val messages = uids.mapNotNull { uid ->
+                uidFolder.getMessageByUID(uid)
+            }.toTypedArray()
+
+            if (messages.isNotEmpty()) {
+                // Устанавливаем флаг \Seen для указанных писем
+                folder.setFlags(messages, Flags(Flags.Flag.SEEN), true)
+            } else {
+                throw MessagingException("Письма с указанными UID не найдены: $uids")
+            }
+
+            folder.close(false)
+            return "Письма успешно помечены как прочитанные"
+        } finally {
             store.close()
         }
     }
