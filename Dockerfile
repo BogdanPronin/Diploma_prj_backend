@@ -2,7 +2,7 @@ FROM openjdk:21-jdk-slim
 
 WORKDIR /app
 
-COPY build.gradle.kts settings.gradle ./
+COPY build.gradle.kts settings.gradle.kts ./
 COPY gradlew ./
 COPY gradle ./gradle
 COPY src ./src
