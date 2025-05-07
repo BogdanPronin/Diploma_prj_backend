@@ -10,9 +10,7 @@ import jakarta.mail.internet.InternetAddress
 import jakarta.mail.internet.MimeBodyPart
 import jakarta.mail.internet.MimeMessage
 import jakarta.mail.internet.MimeMultipart
-import jakarta.mail.search.FromStringTerm
-import jakarta.mail.search.HeaderTerm
-import jakarta.mail.search.RecipientStringTerm
+import jakarta.mail.search.*
 import jakarta.mail.util.ByteArrayDataSource
 
 import org.springframework.stereotype.Service
@@ -20,6 +18,7 @@ import org.springframework.web.multipart.MultipartFile
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.util.*
+import kotlin.math.max
 
 @Service
 class ImapService(
@@ -47,55 +46,71 @@ class ImapService(
         val session = Session.getInstance(props)
         val store = provider.connect(session, email, accessToken)
 
-        val folder = provider.getFolder(store, category)
-        folder.open(Folder.READ_ONLY)
+        val folder = provider.getFolder(store, category).apply { open(Folder.READ_ONLY) }
+        val uidFolder = folder as UIDFolder
 
-        val unreadCount = folder.unreadMessageCount
+        // 3. Считаем общее и непрочитанное
         val totalCount = folder.messageCount
+        val unreadCount = folder.unreadMessageCount
 
-        // Получение начальных сообщений
-        val initialMessages = if (beforeUid != null) {
-            folder.getMessagesByUID(1, beforeUid - 1).takeLast(limit).reversed()
+        // 4. Вычисляем границы по sequence numbers
+        val endSeq = if (beforeUid != null) {
+            // находим номер сообщения с этим UID и отнимаем 1
+            uidFolder.getMessageByUID(beforeUid)?.messageNumber?.minus(1)
+                ?: folder.messageCount
         } else {
-            folder.messages.takeLast(limit).reversed()
+            folder.messageCount
+        }
+        val startSeq = max(1, endSeq - limit + 1)
+
+        // 5. Берём именно этот диапазон по номерам
+        val initialMsgs: Array<Message> = folder.getMessages(startSeq, endSeq)
+
+        // 6. Пакетно загружаем нужные поля
+        val fetchProfile = FetchProfile().apply {
+            add(FetchProfile.Item.ENVELOPE)
+            add(FetchProfile.Item.FLAGS)
+            add("Message-ID")
+            add("References")
+        }
+        folder.fetch(initialMsgs, fetchProfile)
+
+        // 7. Маппим и собираем уже загруженные Message-ID
+        val mapped = initialMsgs.map { msg -> emailMapper.mapMessage(msg, folder) }
+        val existingIds = mapped.map { it.messageId ?: it.uid.toString() }.toSet()
+
+        // 8. Собираем новые References
+        val refs = mapped
+            .flatMap { it.references?.split("\\s+".toRegex()).orEmpty() }
+            .filter { it.isNotBlank() && it !in existingIds }
+            .distinct()
+
+        // 9. Ищем все References одним OrTerm-запросом
+        val additional = if (refs.isNotEmpty()) {
+            val terms = refs.map { ref -> HeaderTerm("Message-ID", ref) as SearchTerm }
+                .toTypedArray()
+            val orTerm = OrTerm(terms)
+            val found = folder.search(orTerm)
+            folder.fetch(found, fetchProfile)
+            found
+                .map { msg -> emailMapper.mapMessage(msg, folder) }
+                .filter { msgDto -> (msgDto.messageId ?: msgDto.uid.toString()) !in existingIds }
+        } else {
+            emptyList()
         }
 
-        // Маппинг начальных сообщений
-        val mappedMessages = initialMessages.map { msg -> emailMapper.mapMessage(msg, folder) }
+        // 10. Объединяем, убираем дубликаты и группируем по цепочкам
+        val all = (mapped + additional).distinctBy { it.uid }
+        val grouped = emailMapper.groupThreads(all)
 
-        // Собираем Message-ID из References, исключая уже загруженные
-        val existingMessageIds = mappedMessages.map { it.messageId ?: it.uid.toString() }.toSet()
-        val referenceIds = mappedMessages
-            .flatMap { it.references?.split("\\s+".toRegex())?.filter { it.isNotBlank() } ?: emptyList() }
-            .filter { !existingMessageIds.contains(it) }
-            .toSet()
-
-        // Поиск дополнительных писем по Message-ID
-        val additionalMessages = mutableListOf<Message>()
-        referenceIds.forEach { refId ->
-            val searchTerm = HeaderTerm("Message-ID", refId)
-            val foundMessages = folder.search(searchTerm)
-            additionalMessages.addAll(foundMessages)
-        }
-
-        // Маппинг дополнительных сообщений, исключая дубликаты
-        val additionalMappedMessages = additionalMessages
-            .map { msg -> emailMapper.mapMessage(msg, folder) }
-            .filter { !existingMessageIds.contains(it.messageId ?: it.uid.toString()) }
-
-        // Объединяем сообщения
-        val allMessages = (mappedMessages + additionalMappedMessages).distinctBy { it.uid }
-
-        // Группировка
-        val groupedMessages = emailMapper.groupThreads(allMessages)
-
+        // 11. Закрываем ресурсы
         folder.close(false)
         store.close()
 
         return EmailResponseDto(
-            totalMessages = totalCount,
+            totalMessages       = totalCount,
             totalUnreadMessages = unreadCount,
-            messages = groupedMessages
+            messages            = grouped
         )
     }
 

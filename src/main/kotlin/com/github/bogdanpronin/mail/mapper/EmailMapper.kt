@@ -38,45 +38,37 @@ class EmailMapper {
     }
 
     fun groupThreads(messages: List<EmailMessageDto>): List<EmailMessageDto> {
-        // Карта для быстрого доступа к письмам
-        val messageMap = messages.associateBy { it.messageId ?: it.uid.toString() }
-        // Карта цепочек (группировка по корневому Message-ID)
-        val threadMap = mutableMapOf<String, MutableList<EmailMessageDto>>()
+        // Создаем список с кэшированными датами (эпоха в миллисекундах)
+        val messagesWithEpoch = messages.map { message ->
+            message to (message.date?.let { Instant.parse(it).toEpochMilli() } ?: 0L)
+        }
 
-        // Группируем письма по цепочкам
-        messages.forEach { message ->
+        // Сортируем все письма по дате (новые сверху)
+        val sortedMessages = messagesWithEpoch.sortedByDescending { it.second }
+
+        // Группируем по threadId
+        val threadMap = sortedMessages.groupBy { (message, _) ->
             val messageId = message.messageId ?: message.uid.toString()
-            val threadId = if (message.references != null) {
+            if (message.references != null) {
                 val refs = message.references.split("\\s+".toRegex()).filter { it.isNotBlank() }
-                refs.firstOrNull() ?: messageId // Первый Message-ID как идентификатор цепочки
+                refs.firstOrNull() ?: messageId
             } else {
                 messageId
             }
-
-            // Добавляем в цепочку
-            if (!threadMap.containsKey(threadId)) {
-                threadMap[threadId] = mutableListOf()
-            }
-            threadMap[threadId]!!.add(message)
         }
 
         // Формируем результат: только последнее письмо каждой цепочки
-        val result = threadMap.values.map { threadMessages ->
-            // Сортируем письма цепочки по дате (новые сверху)
-            val sortedThread = threadMessages.sortedByDescending {
-                it.date?.let { date -> Instant.parse(date).toEpochMilli() } ?: 0
-            }
-            // Берем последнее письмо
-            val latestMessage = sortedThread.first()
-            // Формируем threadMessages (от старого к новому), исключая последнее
-            val threadMessages = sortedThread.drop(1).sortedBy {
-                it.date?.let { date -> Instant.parse(date).toEpochMilli() } ?: 0
-            }
+        val result = threadMap.values.map { thread ->
+            val latestMessage = thread.first().first // Первое письмо (самое новое)
+            // Остальные письма в цепочке (от старого к новому)
+            val threadMessages = thread.drop(1)
+                .sortedBy { it.second } // Сортировка по эпохе (от старого к новому)
+                .map { it.first }
             latestMessage.copy(threadMessages = threadMessages)
         }
 
-        // Сортируем результат по дате последнего письма
-        return result.sortedByDescending { it.date?.let { date -> Instant.parse(date).toEpochMilli() } }
+        // Сортировка уже не нужна, так как исходный список отсортирован
+        return result
     }
 
     private fun mapAddress(addr: Address?): AddressObject? {
