@@ -37,43 +37,46 @@ class EmailMapper {
         )
     }
 
-    fun fillChildren(messages: List<EmailMessageDto>): List<EmailMessageDto> {
+    fun groupThreads(messages: List<EmailMessageDto>): List<EmailMessageDto> {
         // Карта для быстрого доступа к письмам
         val messageMap = messages.associateBy { it.messageId ?: it.uid.toString() }
-        // Карта для хранения детей
-        val childrenMap = mutableMapOf<String, MutableList<EmailMessageDto>>()
+        // Карта цепочек (группировка по корневому Message-ID)
+        val threadMap = mutableMapOf<String, MutableList<EmailMessageDto>>()
 
-        // Определяем родительско-дочерние связи
+        // Группируем письма по цепочкам
         messages.forEach { message ->
             val messageId = message.messageId ?: message.uid.toString()
-            if (message.references != null) {
+            val threadId = if (message.references != null) {
                 val refs = message.references.split("\\s+".toRegex()).filter { it.isNotBlank() }
-                val parentId = refs.lastOrNull() // Последний Message-ID как родитель
-                if (parentId != null && parentId != messageId && messageMap.containsKey(parentId)) {
-                    if (!childrenMap.containsKey(parentId)) {
-                        childrenMap[parentId] = mutableListOf()
-                    }
-                    childrenMap[parentId]!!.add(message)
-                }
+                refs.firstOrNull() ?: messageId // Первый Message-ID как идентификатор цепочки
+            } else {
+                messageId
             }
+
+            // Добавляем в цепочку
+            if (!threadMap.containsKey(threadId)) {
+                threadMap[threadId] = mutableListOf()
+            }
+            threadMap[threadId]!!.add(message)
         }
 
-        // Формируем иерархию
-        val result = messages.map { message ->
-            val messageId = message.messageId ?: message.uid.toString()
-            val children = childrenMap[messageId]?.sortedByDescending {
-                it.date?.let { date -> Instant.parse(date).toEpochMilli() }
+        // Формируем результат: только последнее письмо каждой цепочки
+        val result = threadMap.values.map { threadMessages ->
+            // Сортируем письма цепочки по дате (новые сверху)
+            val sortedThread = threadMessages.sortedByDescending {
+                it.date?.let { date -> Instant.parse(date).toEpochMilli() } ?: 0
             }
-            message.copy(children = children)
+            // Берем последнее письмо
+            val latestMessage = sortedThread.first()
+            // Формируем threadMessages (от старого к новому), исключая последнее
+            val threadMessages = sortedThread.drop(1).sortedBy {
+                it.date?.let { date -> Instant.parse(date).toEpochMilli() } ?: 0
+            }
+            latestMessage.copy(threadMessages = threadMessages)
         }
 
-        // Возвращаем только корневые письма
-        return result
-            .filter { message ->
-                val messageId = message.messageId ?: message.uid.toString()
-                childrenMap.values.none { children -> children.any { it.messageId == messageId || it.uid.toString() == messageId } }
-            }
-            .sortedByDescending { it.date?.let { date -> Instant.parse(date).toEpochMilli() } }
+        // Сортируем результат по дате последнего письма
+        return result.sortedByDescending { it.date?.let { date -> Instant.parse(date).toEpochMilli() } }
     }
 
     private fun mapAddress(addr: Address?): AddressObject? {

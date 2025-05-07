@@ -11,6 +11,7 @@ import jakarta.mail.internet.MimeBodyPart
 import jakarta.mail.internet.MimeMessage
 import jakarta.mail.internet.MimeMultipart
 import jakarta.mail.search.FromStringTerm
+import jakarta.mail.search.HeaderTerm
 import jakarta.mail.search.RecipientStringTerm
 import jakarta.mail.util.ByteArrayDataSource
 
@@ -49,21 +50,44 @@ class ImapService(
         val folder = provider.getFolder(store, category)
         folder.open(Folder.READ_ONLY)
 
-        val rootFolders = store.defaultFolder.list("*")
-
         val unreadCount = folder.unreadMessageCount
         val totalCount = folder.messageCount
 
-        val messages = if (beforeUid != null) {
+        // Получение начальных сообщений
+        val initialMessages = if (beforeUid != null) {
             folder.getMessagesByUID(1, beforeUid - 1).takeLast(limit).reversed()
         } else {
             folder.messages.takeLast(limit).reversed()
         }
 
-        var parsedMessages = messages.map { msg ->
-            emailMapper.mapMessage(msg, folder)
+        // Маппинг начальных сообщений
+        val mappedMessages = initialMessages.map { msg -> emailMapper.mapMessage(msg, folder) }
+
+        // Собираем Message-ID из References, исключая уже загруженные
+        val existingMessageIds = mappedMessages.map { it.messageId ?: it.uid.toString() }.toSet()
+        val referenceIds = mappedMessages
+            .flatMap { it.references?.split("\\s+".toRegex())?.filter { it.isNotBlank() } ?: emptyList() }
+            .filter { !existingMessageIds.contains(it) }
+            .toSet()
+
+        // Поиск дополнительных писем по Message-ID
+        val additionalMessages = mutableListOf<Message>()
+        referenceIds.forEach { refId ->
+            val searchTerm = HeaderTerm("Message-ID", refId)
+            val foundMessages = folder.search(searchTerm)
+            additionalMessages.addAll(foundMessages)
         }
-        parsedMessages = emailMapper.fillChildren(parsedMessages)
+
+        // Маппинг дополнительных сообщений, исключая дубликаты
+        val additionalMappedMessages = additionalMessages
+            .map { msg -> emailMapper.mapMessage(msg, folder) }
+            .filter { !existingMessageIds.contains(it.messageId ?: it.uid.toString()) }
+
+        // Объединяем сообщения
+        val allMessages = (mappedMessages + additionalMappedMessages).distinctBy { it.uid }
+
+        // Группировка
+        val groupedMessages = emailMapper.groupThreads(allMessages)
 
         folder.close(false)
         store.close()
@@ -71,7 +95,7 @@ class ImapService(
         return EmailResponseDto(
             totalMessages = totalCount,
             totalUnreadMessages = unreadCount,
-            messages = parsedMessages
+            messages = groupedMessages
         )
     }
 
@@ -252,7 +276,6 @@ class ImapService(
             var parsedMessages = messages.map { msg ->
                 emailMapper.mapMessage(msg, folder)
             }
-            parsedMessages = emailMapper.fillChildren(parsedMessages)
 
             return EmailResponseDto(
                 totalMessages = parsedMessages.size,
@@ -293,7 +316,6 @@ class ImapService(
             var parsedMessages = messages.map { msg ->
                 emailMapper.mapMessage(msg, folder)
             }
-            parsedMessages = emailMapper.fillChildren(parsedMessages)
 
             return EmailResponseDto(
                 totalMessages = parsedMessages.size,

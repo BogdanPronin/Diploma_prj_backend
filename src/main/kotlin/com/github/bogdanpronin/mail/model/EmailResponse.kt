@@ -21,7 +21,7 @@ data class EmailMessageDto(
     val attachments: List<EmailAttachmentDto>,
     val messageId: String? = null,
     val references: String? = null,
-    val children: List<EmailMessageDto>? = null
+    val threadMessages: List<EmailMessageDto>? = null
 )
 
 data class AddressObject(
