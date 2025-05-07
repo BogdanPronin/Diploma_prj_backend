@@ -31,8 +31,49 @@ class EmailMapper {
             text = extractText(mime),
             html = extractHtml(mime),
             isRead = mime.flags.contains(Flags.Flag.SEEN),
-            attachments = extractAttachments(mime)
+            attachments = extractAttachments(mime),
+            messageId = mime.getHeader("Message-ID")?.firstOrNull(),
+            references = mime.getHeader("References")?.firstOrNull()
         )
+    }
+
+    fun fillChildren(messages: List<EmailMessageDto>): List<EmailMessageDto> {
+        // Карта для быстрого доступа к письмам
+        val messageMap = messages.associateBy { it.messageId ?: it.uid.toString() }
+        // Карта для хранения детей
+        val childrenMap = mutableMapOf<String, MutableList<EmailMessageDto>>()
+
+        // Определяем родительско-дочерние связи
+        messages.forEach { message ->
+            val messageId = message.messageId ?: message.uid.toString()
+            if (message.references != null) {
+                val refs = message.references.split("\\s+".toRegex()).filter { it.isNotBlank() }
+                val parentId = refs.lastOrNull() // Последний Message-ID как родитель
+                if (parentId != null && parentId != messageId && messageMap.containsKey(parentId)) {
+                    if (!childrenMap.containsKey(parentId)) {
+                        childrenMap[parentId] = mutableListOf()
+                    }
+                    childrenMap[parentId]!!.add(message)
+                }
+            }
+        }
+
+        // Формируем иерархию
+        val result = messages.map { message ->
+            val messageId = message.messageId ?: message.uid.toString()
+            val children = childrenMap[messageId]?.sortedByDescending {
+                it.date?.let { date -> Instant.parse(date).toEpochMilli() }
+            }
+            message.copy(children = children)
+        }
+
+        // Возвращаем только корневые письма
+        return result
+            .filter { message ->
+                val messageId = message.messageId ?: message.uid.toString()
+                childrenMap.values.none { children -> children.any { it.messageId == messageId || it.uid.toString() == messageId } }
+            }
+            .sortedByDescending { it.date?.let { date -> Instant.parse(date).toEpochMilli() } }
     }
 
     private fun mapAddress(addr: Address?): AddressObject? {
@@ -115,7 +156,7 @@ class EmailMapper {
             val content = message.content
             if (content is Multipart) {
                 for (i in 0 until content.count) {
-                    val part = content.getBodyPart(i) // Исправлено: content вместо multipart
+                    val part = content.getBodyPart(i)
                     if (part.disposition == Part.ATTACHMENT) {
                         attachments.add(
                             EmailAttachmentDto(

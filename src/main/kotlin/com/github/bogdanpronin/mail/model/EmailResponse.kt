@@ -18,7 +18,10 @@ data class EmailMessageDto(
     val text: String?,
     val html: String?,
     val isRead: Boolean,
-    val attachments: List<EmailAttachmentDto>
+    val attachments: List<EmailAttachmentDto>,
+    val messageId: String? = null,
+    val references: String? = null,
+    val children: List<EmailMessageDto>? = null
 )
 
 data class AddressObject(

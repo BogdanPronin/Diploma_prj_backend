@@ -1,9 +1,6 @@
 package com.github.bogdanpronin.mail.controllers
 
-import com.github.bogdanpronin.mail.controllers.dto.DeleteForeverRequestDto
-import com.github.bogdanpronin.mail.controllers.dto.DownloadAttachmentRequest
-import com.github.bogdanpronin.mail.controllers.dto.MarkReadRequest
-import com.github.bogdanpronin.mail.controllers.dto.MoveToFolderRequestDto
+import com.github.bogdanpronin.mail.controllers.dto.*
 import com.github.bogdanpronin.mail.model.*
 import com.github.bogdanpronin.mail.services.ImapService
 import org.springframework.core.io.ByteArrayResource
@@ -21,11 +18,6 @@ import java.nio.charset.StandardCharsets
 class EmailController(
     private val imapService: ImapService
 ) {
-//    @PostMapping("/send", consumes = ["multipart/form-data"])
-//    fun sendEmail(@ModelAttribute form: SendEmailForm): ResponseEntity<Any> {
-//        emailService.sendEmail(form)
-//        return ResponseEntity.ok(mapOf("message" to "Письмо с вложениями отправлено"))
-//    }
     @GetMapping("/receive")
     fun getEmails(
         @RequestHeader("Authorization") authHeader: String,
@@ -78,25 +70,34 @@ class EmailController(
     fun sendEmail(
         @RequestHeader("Authorization") authHeader: String,
         @RequestPart("to") to: String,
+        @RequestPart("bcc", required = false) bcc: String?,
+        @RequestPart("cc", required = false) cc: String?,
         @RequestPart("subject") subject: String,
         @RequestPart("html") html: String,
         @RequestPart("providerName") providerName: String,
         @RequestPart("email") email: String,
+        @RequestPart("inReplyTo", required = false) inReplyTo: String?,
+        @RequestPart("references", required = false) references: String?,
         @RequestPart("attachments", required = false) attachments: List<MultipartFile>?
     ): ResponseEntity<Unit> {
-            val accessToken = authHeader.removePrefix("Bearer ").trim()
+        val accessToken = authHeader.removePrefix("Bearer ").trim()
 
-            val result = imapService.sendEmail(
+        val result = imapService.sendEmail(
+            SendEmailDto(
                 providerName = providerName,
                 accessToken = accessToken,
                 to = to,
                 subject = subject,
                 html = html,
                 attachments = attachments,
-                email = email
+                email = email,
+                bcc = bcc,
+                cc = cc,
+                inReplyTo = inReplyTo,
+                references = references
             )
-            return ResponseEntity.ok(result)
-
+        )
+        return ResponseEntity.ok(result)
     }
 
     @GetMapping("/emails-from-sender")

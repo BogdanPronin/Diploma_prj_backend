@@ -1,4 +1,5 @@
 package com.github.bogdanpronin.mail.services
+import com.github.bogdanpronin.mail.controllers.dto.SendEmailDto
 import com.github.bogdanpronin.mail.mapper.EmailMapper
 import com.github.bogdanpronin.mail.model.EmailResponseDto
 import com.github.bogdanpronin.mail.provider.EmailProvider
@@ -59,9 +60,10 @@ class ImapService(
             folder.messages.takeLast(limit).reversed()
         }
 
-        val parsedMessages = messages.map { msg ->
+        var parsedMessages = messages.map { msg ->
             emailMapper.mapMessage(msg, folder)
         }
+        parsedMessages = emailMapper.fillChildren(parsedMessages)
 
         folder.close(false)
         store.close()
@@ -160,48 +162,52 @@ class ImapService(
         }
     }
 
-    fun sendEmail(
-        providerName: String,
-        accessToken: String,
-        to: String,
-        subject: String,
-        html: String,
-        attachments: List<MultipartFile>?,
-        email: String
-    ) {
-        val provider = providers[providerName] ?: throw IllegalArgumentException("Unknown provider: $providerName")
+    fun sendEmail(dto: SendEmailDto) {
+        val provider = providers[dto.providerName] ?: throw IllegalArgumentException("Unknown provider: ${dto.providerName}")
         val smtpConfig = provider.getConfig().smtp
 
         val props = Properties().apply {
             put("mail.smtp.auth", "true")
-            put("mail.smtp.starttls.enable", "true")     // STARTTLS
-            put("mail.smtp.ssl.enable", smtpConfig.sslEnabled)         // без SSL
+            put("mail.smtp.starttls.enable", "true")
+            put("mail.smtp.ssl.enable", smtpConfig.sslEnabled)
             put("mail.smtp.host", smtpConfig.host)
             put("mail.smtp.port", smtpConfig.port)
-            put("mail.smtp.auth.mechanisms",smtpConfig.authMechanism)
+            put("mail.smtp.auth.mechanisms", smtpConfig.authMechanism)
         }
-
 
         val session = Session.getInstance(props, null)
         val transport = session.getTransport("smtp")
 
         try {
-            transport.connect(smtpConfig.host, email, accessToken)
+            transport.connect(smtpConfig.host, dto.email, dto.accessToken)
 
             val message = MimeMessage(session).apply {
-                setFrom(InternetAddress(email))
-                setRecipients(Message.RecipientType.TO, InternetAddress.parse(to))
-                setSubject(subject)
+                setFrom(InternetAddress(dto.email))
+                setRecipients(Message.RecipientType.TO, InternetAddress.parse(dto.to))
+
+                if (!dto.cc.isNullOrBlank()) {
+                    setRecipients(Message.RecipientType.CC, InternetAddress.parse(dto.cc))
+                }
+
+                if (!dto.bcc.isNullOrBlank()) {
+                    setRecipients(Message.RecipientType.BCC, InternetAddress.parse(dto.bcc))
+                }
+
+                setSubject(dto.subject, "UTF-8")
+                if (!dto.inReplyTo.isNullOrBlank()) {
+                    setHeader("In-Reply-To", dto.inReplyTo)
+                }
+                if (!dto.references.isNullOrBlank()) {
+                    setHeader("References", dto.references)
+                }
 
                 val multipart = MimeMultipart()
 
-                // HTML body part
                 val htmlPart = MimeBodyPart()
-                htmlPart.setContent(html, "text/html; charset=utf-8")
+                htmlPart.setContent(dto.html, "text/html; charset=utf-8")
                 multipart.addBodyPart(htmlPart)
 
-                // Attachments
-                attachments?.forEach { file ->
+                dto.attachments?.forEach { file ->
                     val attachmentPart = MimeBodyPart()
                     val ds: DataSource = ByteArrayDataSource(file.bytes, file.contentType ?: "application/octet-stream")
                     attachmentPart.dataHandler = DataHandler(ds)
@@ -243,9 +249,10 @@ class ImapService(
         try {
             val searchTerm = FromStringTerm(senderEmail)
             val messages = folder.search(searchTerm).takeLast(limit).reversed()
-            val parsedMessages = messages.map { msg ->
+            var parsedMessages = messages.map { msg ->
                 emailMapper.mapMessage(msg, folder)
             }
+            parsedMessages = emailMapper.fillChildren(parsedMessages)
 
             return EmailResponseDto(
                 totalMessages = parsedMessages.size,
@@ -283,9 +290,10 @@ class ImapService(
         try {
             val searchTerm = RecipientStringTerm(Message.RecipientType.TO, recipientEmail)
             val messages = folder.search(searchTerm).takeLast(limit).reversed()
-            val parsedMessages = messages.map { msg ->
+            var parsedMessages = messages.map { msg ->
                 emailMapper.mapMessage(msg, folder)
             }
+            parsedMessages = emailMapper.fillChildren(parsedMessages)
 
             return EmailResponseDto(
                 totalMessages = parsedMessages.size,
