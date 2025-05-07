@@ -176,5 +176,35 @@ class EmailController(
         return ResponseEntity.ok(response)
     }
 
+    @PostMapping("/save-draft", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
+    fun saveDraft(
+        @RequestHeader("Authorization") authHeader: String,
+        @RequestPart("to") to: String?,
+        @RequestPart("bcc", required = false) bcc: String?,
+        @RequestPart("cc", required = false) cc: String?,
+        @RequestPart("subject") subject: String?,
+        @RequestPart("html") html: String? = "",
+        @RequestPart("providerName") providerName: String,
+        @RequestPart("email") email: String,
+        @RequestPart("inReplyTo", required = false) inReplyTo: String?,
+        @RequestPart("references", required = false) references: String?,
+        @RequestPart("attachments", required = false) attachments: List<MultipartFile>?
+    ): ResponseEntity<Long> {
+        val uid = imapService.saveDraft(
+            to = to,
+            bcc = bcc,
+            cc = cc,
+            subject = subject,
+            html = html,
+            providerName = providerName,
+            email = email,
+            accessToken = authHeader.replace("Bearer ", ""),
+            inReplyTo = inReplyTo,
+            references = references,
+            attachments = attachments
+        )
+        return ResponseEntity.ok(uid)
+    }
+
 }
 

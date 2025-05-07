@@ -134,29 +134,36 @@ class ImapService(
 
         val session = Session.getInstance(props)
         val store = provider.connect(session, email, accessToken)
+        var from: Folder? = null
+        var to: Folder? = null
 
         try {
-            val from = provider.getFolder(store, sourceFolder)
-            val to = provider.getFolder(store, toFolder)
+            from = provider.getFolder(store, sourceFolder)
+            to = provider.getFolder(store, toFolder)
 
             from.open(Folder.READ_WRITE)
             to.open(Folder.READ_WRITE)
 
             val uidFolder = from as UIDFolder
             val message = uidFolder.getMessageByUID(uid)
-                ?: throw MessagingException("Письмо с UID $uid не найдено")
+                ?: throw MessagingException("Письмо с UID $uid не найдено в папке $sourceFolder")
 
-            // Копируем письмо в целевую папку
             from.copyMessages(arrayOf(message), to)
 
-            // Помечаем письмо как удалённое в исходной папке
-            message.setFlag(Flags.Flag.DELETED, true)
+            if (providerName.lowercase() == "custom") {
+                if (toFolder == "TRASH") {
+                    message.setFlag(Flags.Flag.DELETED, true)
+                }
+            }
 
-            // Удаляем помеченные письма из исходной папки
             from.expunge()
 
             return "Письмо перемещено в папку $toFolder"
+        } catch (e: MessagingException) {
+           throw e
         } finally {
+            from?.close(true)
+            to?.close(true)
             store.close()
         }
     }
@@ -434,4 +441,93 @@ class ImapService(
         }
     }
 
+    fun saveDraft(
+        to: String?,
+        bcc: String?,
+        cc: String?,
+        subject: String?,
+        html: String?,
+        providerName: String,
+        email: String,
+        accessToken: String,
+        inReplyTo: String?,
+        references: String?,
+        attachments: List<MultipartFile>?
+    ): Long {
+        val provider = providers[providerName] ?: throw IllegalArgumentException("Unknown provider: $providerName")
+        val imapConfig = provider.getConfig().imap
+
+        val props = Properties().apply {
+            put("mail.store.protocol", "imap")
+            put("mail.imap.host", imapConfig.host)
+            put("mail.imap.port", imapConfig.port)
+            put("mail.imap.ssl.enable", imapConfig.sslEnabled.toString())
+            put("mail.imap.auth.mechanisms", imapConfig.authMechanism)
+        }
+
+        val session = Session.getInstance(props)
+        val store = provider.connect(session, email, accessToken)
+
+        var draftsFolder: Folder? = null
+        try {
+            draftsFolder = provider.getFolder(store, "DRAFTS")
+            draftsFolder.open(Folder.READ_WRITE)
+
+            val message = MimeMessage(session).apply {
+                setFrom(InternetAddress(email))
+                if (!to.isNullOrBlank()) {
+                    setRecipients(Message.RecipientType.TO, InternetAddress.parse(to))
+                }
+                if (!cc.isNullOrBlank()) {
+                    setRecipients(Message.RecipientType.CC, InternetAddress.parse(cc))
+                }
+                if (!bcc.isNullOrBlank()) {
+                    setRecipients(Message.RecipientType.BCC, InternetAddress.parse(bcc))
+                }
+                setSubject(subject, "UTF-8")
+                if (!inReplyTo.isNullOrBlank()) {
+                    setHeader("In-Reply-To", inReplyTo)
+                }
+                if (!references.isNullOrBlank()) {
+                    setHeader("References", references)
+                }
+
+                val multipart = MimeMultipart()
+                val htmlPart = MimeBodyPart()
+                htmlPart.setContent(html, "text/html; charset=utf-8")
+                multipart.addBodyPart(htmlPart)
+
+                attachments?.forEach { file ->
+                    val attachmentPart = MimeBodyPart()
+                    val ds: DataSource = ByteArrayDataSource(file.bytes, file.contentType ?: "application/octet-stream")
+                    attachmentPart.dataHandler = DataHandler(ds)
+                    attachmentPart.fileName = file.originalFilename
+                    multipart.addBodyPart(attachmentPart)
+                }
+
+                setContent(multipart)
+                setFlag(Flags.Flag.DRAFT, true)
+            }
+
+            draftsFolder.appendMessages(arrayOf(message))
+
+            val uidFolder = draftsFolder as UIDFolder
+            val savedMessage = draftsFolder.messages.lastOrNull()
+                ?: throw MessagingException("Не удалось сохранить черновик")
+            val uid = uidFolder.getUID(savedMessage)
+
+            return uid
+        } finally {
+            try {
+                draftsFolder?.close(false)
+            } catch (e: Exception) {
+                println("Ошибка при закрытии папки DRAFTS: ${e.message}")
+            }
+            try {
+                store.close()
+            } catch (e: Exception) {
+                println("Ошибка при закрытии хранилища: ${e.message}")
+            }
+        }
+    }
 }
