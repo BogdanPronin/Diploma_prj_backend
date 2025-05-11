@@ -78,3 +78,21 @@ email:
         TRASH: Trash
         SPAM: Spam
         ARCHIVE: Archive
+    yandex:
+        imap:
+            host: imap.yandex.ru
+            port: "993"
+            sslEnabled: true
+            authMechanism: XOAUTH2
+        smtp:
+            host: smtp.yandex.ru
+            port: "465"
+            sslEnabled: true
+            authMechanism: XOAUTH2
+        folderMappings:
+            INBOX: INBOX
+            SENT: Sent
+            DRAFTS: Drafts
+            TRASH: Trash
+            SPAM: Spam
+            ARCHIVE: Archive
