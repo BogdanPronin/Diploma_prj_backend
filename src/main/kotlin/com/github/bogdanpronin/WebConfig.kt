@@ -6,9 +6,15 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer
 
 @Configuration
 class WebConfig : WebMvcConfigurer {
+    private val allowedOrigins: Array<String> = System.getenv("ALLOWED_ORIGINS")
+        ?.split(",")
+        ?.map { it.trim() }
+        ?.toTypedArray()
+        ?: arrayOf()
+
     override fun addCorsMappings(registry: CorsRegistry) {
         registry.addMapping("/**")
-            .allowedOrigins("http://localhost:3001")
+            .allowedOrigins(*allowedOrigins)
             .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
             .allowedHeaders("Authorization", "Content-Type", "Accept")
             .allowCredentials(true)

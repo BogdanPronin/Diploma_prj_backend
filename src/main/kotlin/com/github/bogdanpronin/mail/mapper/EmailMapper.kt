@@ -4,6 +4,7 @@ import com.github.bogdanpronin.mail.model.*
 import jakarta.mail.*
 import jakarta.mail.internet.InternetAddress
 import jakarta.mail.internet.MimeMessage
+import jakarta.mail.internet.MimeUtility
 import org.springframework.stereotype.Component
 import java.time.Instant
 import java.time.ZoneOffset
@@ -150,20 +151,48 @@ class EmailMapper {
         try {
             val content = message.content
             if (content is Multipart) {
-                for (i in 0 until content.count) {
-                    val part = content.getBodyPart(i)
-                    if (part.disposition == Part.ATTACHMENT) {
-                        attachments.add(
-                            EmailAttachmentDto(
-                                filename = part.fileName ?: "unnamed",
-                                mimeType = part.contentType,
-                                size = part.size
-                            )
+                processMultipart(content, attachments)
+            }
+        } catch (e: Exception) {
+            println("Error extracting attachments: ${e.message}")
+        }
+        return attachments
+    }
+
+    private fun processMultipart(multipart: Multipart, attachments: MutableList<EmailAttachmentDto>) {
+        for (i in 0 until multipart.count) {
+            val part = multipart.getBodyPart(i)
+            when {
+                part.isAttachment() -> {
+                    val filename = part.fileName?.let { decodeFilename(it) } ?: "unnamed_${System.currentTimeMillis()}"
+                    val mimeType = part.contentType.split(";")[0].trim()
+                    val size = try { part.size } catch (e: Exception) { 0 }
+                    attachments.add(
+                        EmailAttachmentDto(
+                            filename = filename,
+                            mimeType = mimeType,
+                            size = if (size >= 0) size else 0
                         )
-                    }
+                    )
+                }
+                part.content is Multipart -> {
+                    processMultipart(part.content as Multipart, attachments)
                 }
             }
-        } catch (_: Exception) {}
-        return attachments
+        }
+    }
+
+    private fun Part.isAttachment(): Boolean {
+        return (disposition?.equals(Part.ATTACHMENT, ignoreCase = true) == true ||
+                disposition?.equals(Part.INLINE, ignoreCase = true) == true ||
+                (fileName != null && !contentType.startsWith("text/")))
+    }
+
+    private fun decodeFilename(filename: String): String {
+        return try {
+            MimeUtility.decodeText(filename)
+        } catch (e: Exception) {
+            filename
+        }
     }
 }
